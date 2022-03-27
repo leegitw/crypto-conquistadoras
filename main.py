@@ -1,5 +1,27 @@
 '''
 Main script for the Dexalot challenge.
+
+ /$$$$$$$                                /$$             /$$                  
+| $$__  $$                              | $$            | $$                  
+| $$  \ $$  /$$$$$$  /$$   /$$  /$$$$$$ | $$  /$$$$$$  /$$$$$$                
+| $$  | $$ /$$__  $$|  $$ /$$/ |____  $$| $$ /$$__  $$|_  $$_/                
+| $$  | $$| $$$$$$$$ \  $$$$/   /$$$$$$$| $$| $$  \ $$  | $$                  
+| $$  | $$| $$_____/  >$$  $$  /$$__  $$| $$| $$  | $$  | $$ /$$              
+| $$$$$$$/|  $$$$$$$ /$$/\  $$|  $$$$$$$| $$|  $$$$$$/  |  $$$$/              
+|_______/  \_______/|__/  \__/ \_______/|__/ \______/    \___/                
+
+
+  /$$$$$$  /$$                 /$$ /$$                                        
+ /$$__  $$| $$                | $$| $$                                        
+| $$  \__/| $$$$$$$   /$$$$$$ | $$| $$  /$$$$$$  /$$$$$$$   /$$$$$$   /$$$$$$ 
+| $$      | $$__  $$ |____  $$| $$| $$ /$$__  $$| $$__  $$ /$$__  $$ /$$__  $$
+| $$      | $$  \ $$  /$$$$$$$| $$| $$| $$$$$$$$| $$  \ $$| $$  \ $$| $$$$$$$$
+| $$    $$| $$  | $$ /$$__  $$| $$| $$| $$_____/| $$  | $$| $$  | $$| $$_____/
+|  $$$$$$/| $$  | $$|  $$$$$$$| $$| $$|  $$$$$$$| $$  | $$|  $$$$$$$|  $$$$$$$
+ \______/ |__/  |__/ \_______/|__/|__/ \_______/|__/  |__/ \____  $$ \_______/
+                                                           /$$  \ $$          
+                                                          |  $$$$$$/          
+                                                           \______/           
 '''
 
 from this import d
@@ -41,10 +63,10 @@ def challengeStartupLoad(marketMaker: marketmarker.MarketMaker) :
 
     return orders
 
-# cancel all open orders
+# cancel open orders given orders
 def challengeCancelOpenOrders(marketMaker: marketmarker.MarketMaker, orders) :
     
-    # create list of all open orders
+    # create list of order_ids from provided orders
     order_ids = []
     for order_id in orders.keys(): 
         order_ids.append(order_id)
@@ -85,23 +107,25 @@ def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, cache) :
     # excute the sell order 
     marketMaker.execute_sell_order(params.sell_request)
 
-
+# get order book for buy and sell orders 
 def challengeBonusPrintOrderBook(marketMaker: marketmarker.MarketMaker) :
 
+    # get order by id and print array of data for order 
     def printOrder(order_id) :
         order = marketMaker.contracts.get_order(order_id)
         print(json.dumps(order))
 
-    # 
+    # retrieve buy orders in top of book 
     buyOrders, _ = marketMaker.contracts.getOrderBookBuy(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
     for order_id in buyOrders :
         printOrder(order_id) 
     
-    # 
+    # retrieve sell orders in top of book 
     sellOrders, _ = marketMaker.contracts.getOrderBookSell(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
     for order_id in sellOrders :
         printOrder(order_id) 
 
+# cancel all open orders 
 def challengeCancelAllOpenOrders(marketMaker: marketmarker.MarketMaker) :
 
     # load all open orders 
@@ -119,6 +143,7 @@ def challengeCancelAllOpenOrders(marketMaker: marketmarker.MarketMaker) :
 # this is the main method containing the actual market making strategy logic
 def main():
 
+    # team specific configuration parameters 
     team_name = "TEAM3"
     team_pair = "TEAM3/AVAX"
     deposit_amount = 10 
