@@ -1,9 +1,6 @@
 '''
 Main script for the Dexalot challenge.
 '''
-#######################################################
-# Import here useful libraries
-#######################################################
 
 from this import d
 import requests 
@@ -23,12 +20,12 @@ def signal_handler(signum, frame):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     shutdown = True
 
-# Get Reference Data from the RESTAPI (contract addresses, pairs, trade increments, min, max trade amount) 
+# get Reference Data from the RESTAPI (contract addresses, pairs, trade increments, min, max trade amount) 
 def challengeLoadReferenceData(web3 : contracts.Contracts) :
     web3.load_reference_data()
     
     print("✓\tReference Data\t\t20 points")
-   
+
 # deposit Avax and Team3 automatically
 def challenge1DespositToken(marketMaker: marketmarker.MarketMaker, despositAmount: int) :
     marketMaker.contracts.deposit_token(marketMaker.contracts.sender_address, marketMaker.nativeSymbolName, despositAmount)
@@ -36,6 +33,7 @@ def challenge1DespositToken(marketMaker: marketmarker.MarketMaker, despositAmoun
 
     print("✓\tDeposit Tokens Automatically\t\t 5 points")
 
+# called on startup
 def challengeStartupLoad(marketMaker: marketmarker.MarketMaker) :
 
     # get open orders at startup 
@@ -43,16 +41,20 @@ def challengeStartupLoad(marketMaker: marketmarker.MarketMaker) :
 
     return orders
 
+# cancel all open orders
 def challengeCancelOpenOrders(marketMaker: marketmarker.MarketMaker, orders) :
+    
+    # create list of all open orders
     order_ids = []
     for order_id in orders.keys(): 
         order_ids.append(order_id)
 
+    # for each order, cancel it 
     for order_id in order_ids:
         marketMaker.cancel_order(order_id)
 
-# enter a BUY & a SELL order with a predefined spread around a given mid price or 
-# last price against the contracts. 
+# enter a BUY & a SELL order with a predefined spread around a given mid price
+# or last price against the contracts. 
 def challengeOrderSet1(marketMaker: marketmarker.MarketMaker) :
     params = marketMaker.generate_order_params(default_quantity=2)
 
@@ -65,10 +67,10 @@ def challengeOrderSet1(marketMaker: marketmarker.MarketMaker) :
     return params
 
 # enter a new set of buy & sell orders with different prices based on the changing 
-# mid/last price  against the contracts 
+# mid/last price against the contracts 
 def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, first_order_params : marketmarker.OrderParams) :
     params = marketMaker.generate_order_params()
- 
+
     # verify buy is different than first
     if first_order_params.buy_request.price != params.buy_request.price :
        print("GREAT: buy price is different")
@@ -82,6 +84,7 @@ def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, first_order_params
 
     # excute the sell order 
     marketMaker.execute_sell_order(params.sell_request)
+
 
 def challengeBonusPrintOrderBook(marketMaker: marketmarker.MarketMaker) :
 
