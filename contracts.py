@@ -8,6 +8,7 @@ from eth_account import Account
 from web3.middleware import construct_sign_and_send_raw_middleware
 import utils 
 import requests
+import decimal
 
 ORDER_SIDE_BUY = 0 
 ORDER_SIDE_SELL = 1
@@ -84,7 +85,7 @@ class Contracts :
 
     def format_decimal_quote(self, value, token_pair=None) :
         if token_pair is None :
-            token_pair = self.default_token_pair
+            token_pair = self.default_token_pair    
 
         return utils.to_wei(value, self.pairs[token_pair]["quote_evmdecimals"], self.pairs[token_pair]["quotedisplaydecimals"])
 
@@ -94,17 +95,21 @@ class Contracts :
 
         return utils.to_wei(value, self.pairs[token_pair]["base_evmdecimals"], self.pairs[token_pair]["basedisplaydecimals"])
 
-    def parse_decimal_quote(self, value, token_pair=None) :
+    def parse_decimal_quote(self, value, token_pair=None, display_decimals=None) :
         if token_pair is None :
             token_pair = self.default_token_pair
+        if display_decimals is None :
+            display_decimals =  self.pairs[token_pair]["quotedisplaydecimals"]   
 
-        return utils.from_wei(value, self.pairs[token_pair]["quote_evmdecimals"], self.pairs[token_pair]["quotedisplaydecimals"])
+        return utils.from_wei(value, self.pairs[token_pair]["quote_evmdecimals"], display_decimals)
 
-    def parse_decimal_base(self, value, token_pair=None) :
+    def parse_decimal_base(self, value, token_pair=None, display_decimals=None) :
         if token_pair is None :
             token_pair = self.default_token_pair
+        if display_decimals is None :
+            display_decimals = self.pairs[token_pair]["basedisplaydecimals"]        
 
-        return utils.from_wei(value, self.pairs[token_pair]["base_evmdecimals"], self.pairs[token_pair]["basedisplaydecimals"])
+        return utils.from_wei(value, self.pairs[token_pair]["base_evmdecimals"], display_decimals)
 
     # get AVAX balance for current account wallet
     def get_balance(self): 
@@ -166,7 +171,10 @@ class Contracts :
     def add_order(self, trade_pair_id, price, quantity, order_side, order_type):
         contract = self.get_contract_trade_pairs()
 
-        price = self.format_decimal_quote(price)
+        if order_type == ORDER_TYPE_MARKET and price is None :
+            price = 0 
+        else :    
+            price = self.format_decimal_quote(price)
         quantity = self.format_decimal_base(quantity)
 
         txn = contract.functions.addOrder(self.web3.toBytes(text=trade_pair_id), price, quantity, order_side, order_type)
@@ -180,6 +188,17 @@ class Contracts :
 
         return tx_token
 
+    # estimate the gas for adding an order to the order book for a trade pair
+    def estimate_order_gas(self, trade_pair_id, price, quantity, order_side, order_type):
+        contract = self.get_contract_trade_pairs()
+
+        price = self.format_decimal_quote(price)
+        quantity = self.format_decimal_base(quantity)
+
+        estimated_gas = contract.functions.addOrder(self.web3.toBytes(text=trade_pair_id), price, quantity, order_side, order_type).estimateGas()
+        
+        return estimated_gas        
+
     # for given order id, get array of order details 
     def get_order(self, order_id) :
         contract = self.get_contract_trade_pairs()
@@ -188,11 +207,11 @@ class Contracts :
     
         resp = {      
             "id": tx[0],
-            "price": tx[1],
-            "totalAmount": tx[2],
-            "quantity": tx[3],
-            "quantityFilled": tx[4],
-            "totalFee": tx[5],
+            "price": decimal.Decimal(tx[1]),
+            "totalamount": tx[2],
+            "quantity": decimal.Decimal(tx[3]),
+            "quantityfilled": decimal.Decimal(tx[4]),
+            "totalfee": decimal.Decimal(tx[5]),
             "traderaddress": tx[6],
             "side": tx[7],
             "type1": tx[8],
@@ -201,10 +220,12 @@ class Contracts :
         return resp 
 
     # get the buy order book from the block chain
-    def getOrderBookBuy(self, trade_pair_id, req_depth) :
+    def getOrderBookBuy(self, trade_pair_id, req_depth, limit=1) :
+        if limit == 0 :
+            limit = 1
         contract = self.get_contract_trade_pairs() 
 
-        res = contract.functions.getNBuyBook(self.web3.toBytes(text=trade_pair_id), req_depth, 0, 0, self.last_buy_order_id).call()
+        res = contract.functions.getNBuyBook(self.web3.toBytes(text=trade_pair_id), req_depth, limit, 0, self.last_buy_order_id).call()
 
         orders = [] 
 
@@ -227,11 +248,13 @@ class Contracts :
         return orders, cur_price
 
     # get the sell order book from the block chain
-    def getOrderBookSell(self, trade_pair_id, req_depth) :
-        
+    def getOrderBookSell(self, trade_pair_id, req_depth, limit=1) :
+        if limit == 0 :
+            limit = 1
+
         contract = self.get_contract_trade_pairs() 
 
-        res = contract.functions.getNSellBook(self.web3.toBytes(text=trade_pair_id), req_depth, 0, 0, self.last_sell_order_id).call()
+        res = contract.functions.getNSellBook(self.web3.toBytes(text=trade_pair_id), req_depth, limit, 0, self.last_sell_order_id).call()
 
         orders = [] 
 
