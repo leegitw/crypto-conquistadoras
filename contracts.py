@@ -23,7 +23,8 @@ class Contracts :
     last_sell_order_id = ""  
 
     # initate web3 request with rpc 
-    def __init__(self, rpc_url, sender_address, private_key, token_pair, pairs):
+    def __init__(self, logger, rpc_url, sender_address, private_key, token_pair, pairs):
+        self.logger = logger 
         self.rpc_url = rpc_url
         self.sender_address = sender_address
         self.private_key = private_key
@@ -123,7 +124,7 @@ class Contracts :
         tx_token = self.web3.eth.send_raw_transaction(signed_txn.rawTransaction)   
 
         txn_receipt = self.web3.eth.waitForTransactionReceipt(tx_token)
-        print(txn_receipt)
+        self.logger.debug("deposit_token", str(fromAddress), str(symbol), str(quantity), str(txn_receipt))
 
         return tx_token
 
@@ -137,7 +138,7 @@ class Contracts :
         tx_token = self.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         txn_receipt = self.web3.eth.waitForTransactionReceipt(tx_token)
-        print(txn_receipt)
+        self.logger.debug("cancel_order", str(order_id), str(teamPair), str(txn_receipt))
 
         return tx_token 
 
@@ -152,7 +153,7 @@ class Contracts :
         tx_token = self.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         txn_receipt = self.web3.eth.waitForTransactionReceipt(tx_token)
-        print(txn_receipt)
+        self.logger.debug("cancel_all_orders", str(order_ids), str(teamPair), str(txn_receipt))
 
         return tx_token 
 
@@ -175,7 +176,7 @@ class Contracts :
         tx_token = self.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
 
         txn_receipt = self.web3.eth.waitForTransactionReceipt(tx_token)
-        print(txn_receipt)
+        self.logger.debug("add_order", str(trade_pair_id), str(price), str(quantity), str(order_side), str(order_type), str(txn_receipt))
 
         return tx_token
 

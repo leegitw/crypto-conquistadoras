@@ -10,16 +10,19 @@ class Api :
     
     pairs = None 
 
-    def __init__(self, teamName=None, teamPair=None):
+    def __init__(self, logger, teamName, teamPair):
+        self.logger = logger
         self.teamName = teamName
         self.teamPair = teamPair
-
+        
         self.pairs = self.trading_pairs() 
 
         if teamPair is not None :
             if teamPair not in self.pairs :
                 raise Exception("invalid pair name")
             self.teamTradingPair = self.pairs[teamPair]
+
+            
 
     def trading_pair(self, pair_name):
         if self.pairs is None :

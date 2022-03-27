@@ -24,7 +24,6 @@ Main script for the Dexalot challenge.
                                                            \______/           
 '''
 
-from this import d
 import requests 
 from decimal import Decimal
 import marketmarker
@@ -36,76 +35,132 @@ import os
 import time 
 import json 
 
+import logging
+logger = logging.getLogger('marketmarker')
+hdlr = logging.FileHandler('dexalot.log')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+logger.setLevel(logging.INFO)
+
+
 # this signal handler allows for a graceful shutdown when CTRL+C is pressed
 def signal_handler(signum, frame):
     global shutdown
+    print("Shutting down...")
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     shutdown = True
 
 # get Reference Data from the RESTAPI (contract addresses, pairs, trade increments, min, max trade amount) 
 def challengeLoadReferenceData(web3 : contracts.Contracts) :
-    web3.load_reference_data()
-    
-    print("✓\tReference Data\t\t20 points")
+    try :
+        print("Loading Reference Data...")
+
+        web3.load_reference_data()
+        print("✔\tReference Data\t\t20 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tReference Data\t\t0 points", str(e))    
 
 # deposit Avax and Team3 automatically
 def challenge1DespositToken(marketMaker: marketmarker.MarketMaker, despositAmount: int) :
-    marketMaker.contracts.deposit_token(marketMaker.contracts.sender_address, marketMaker.nativeSymbolName, despositAmount)
-    marketMaker.contracts.deposit_token(marketMaker.contracts.sender_address, marketMaker.teamSymbolName, despositAmount)
+    try :
+        print("Deposit Tokens Automatically...")
 
-    print("✓\tDeposit Tokens Automatically\t\t 5 points")
+        marketMaker.contracts.deposit_token(marketMaker.contracts.sender_address, marketMaker.nativeSymbolName, despositAmount)
+        print("\tMaking deposit to %s"% marketMaker.nativeSymbolName)
+
+        marketMaker.contracts.deposit_token(marketMaker.contracts.sender_address, marketMaker.teamSymbolName, despositAmount)
+        print("\tMaking deposit to %s"% marketMaker.teamSymbolName)
+
+        print("✔\tDesposit Tokens Automatically\t\t5 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tDesposit Tokens Automatically\t\t0 points", str(e))   
 
 # called on startup
 def challengeStartupLoad(marketMaker: marketmarker.MarketMaker) :
+    try :
+        print("Loading Open orders...")
 
-    # get open orders at startup 
-    orders = marketMaker.load_open_orders()
+        # get open orders at startup 
+        orders = marketMaker.load_open_orders()
+
+        print("✔\tOpen Orders\t\t20 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tReference Data\t\t0 points", str(e))   
 
     return orders
 
 # cancel open orders given orders
+# reverse any portion that has been filled
 def challengeCancelOpenOrders(marketMaker: marketmarker.MarketMaker, orders) :
-    
-    # create list of order_ids from provided orders
-    order_ids = []
-    for order_id in orders.keys(): 
-        order_ids.append(order_id)
+    try :
+        # create list of order_ids from provided orders
+        order_ids = []
+        for order_id in orders.keys(): 
+            order_ids.append(order_id)
+        print("Canceling %d Open Orders..." % len(order_ids))
 
-    # for each order, cancel it 
-    for order_id in order_ids:
-        marketMaker.cancel_order(order_id)
+        # TODO: need to handle partially filled orders here!
+
+
+        # for each order, cancel it 
+        for order_id in order_ids:
+            marketMaker.cancel_order(order_id)
+
+        print("✔\tCanceled %d Open Orders\t\t5 points" % len(order_ids))
+    except Exception as e: # work on python 3.x
+        print("𐄂\tCancel %d Open Orders\t\t0 points", str(e))   
 
 # enter a BUY & a SELL order with a predefined spread around a given mid price
 # or last price against the contracts. 
 def challengeOrderSet1(marketMaker: marketmarker.MarketMaker) :
-    params = marketMaker.generate_order_params(default_quantity=2)
+    try :
+        print("First Buy & Sell Orders...")
 
-    # excute the buy order 
-    marketMaker.execute_buy_order(params.buy_request)
+        params = marketMaker.generate_order_params(default_quantity=2)
 
-    # excute the sell order 
-    marketMaker.execute_sell_order(params.sell_request)
+        # excute the buy order 
+        buy_token = marketMaker.execute_buy_order(params.buy_request)
+        print("\tCreated Buy Order at $%.2f for %d shares, token %s"% (params.buy_request.price, params.buy_request.quantity, buy_token))
+
+        # excute the sell order 
+        sell_token = marketMaker.execute_sell_order(params.sell_request)
+        print("\tCreated Sell Order at $%.2f for %d shares, token %s"% (params.sell_request.price, params.sell_request.quantity, sell_token))
+            
+        print("✔\tFirst Buy & Sell Orders\t\t20 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tFirst Buy & Sell Orders\t\t0 points", str(e))   
 
     return params
 
 # enter a new set of buy & sell orders with different prices based on the changing 
 # mid/last price  against the contracts 
 def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, cache) :
-    params = marketMaker.generate_order_params()
 
-    # verify buy is different than first
-    if cache["set1_buy_request_price"] != params.buy_request.price :
-       print("GREAT: buy price is different")
+    try :
+        print("Second Buy & Sell Orders...")
 
-    # excute the buy order 
-    marketMaker.execute_buy_order(params.buy_request)
+        params = marketMaker.generate_order_params()
 
-    # verify sell is different than first
-    if cache["set1_sell_request_price"] != params.sell_request.price :
-       print("GREAT: sell price is different")
+        # verify buy is different than first
+        if cache["set1_buy_request_price"] != params.buy_request.price :
+            print("\tBuy price changed from %.2f to %.2f" % (cache["set1_buy_request_price"], params.buy_request.price ))
 
-    # excute the sell order 
-    marketMaker.execute_sell_order(params.sell_request)
+        # excute the buy order 
+        buy_token = marketMaker.execute_buy_order(params.buy_request)
+        print("\tBuy Order created at $%.2f for %d shares, token %s"% (params.buy_request.price, params.buy_request.quantity, buy_token))
+
+        # verify sell is different than first
+        if cache["set1_sell_request_price"] != params.sell_request.price :
+            print("\tSell price changed from %.2f to %.2f" % (cache["set1_sell_request_price"], params.sell_request.price ))
+
+        # excute the sell order 
+        sell_token = marketMaker.execute_sell_order(params.sell_request)
+        print("\tSell Order created at $%.2f for %d shares, token %s"% (params.sell_request.price, params.sell_request.quantity, sell_token))
+        
+        print("✔\tSecond Buy & Sell Orders\t\t20 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tSecond Buy & Sell Orders\t\t0 points", str(e))   
 
 # get order book for buy and sell orders 
 def challengeBonusPrintOrderBook(marketMaker: marketmarker.MarketMaker) :
@@ -113,32 +168,51 @@ def challengeBonusPrintOrderBook(marketMaker: marketmarker.MarketMaker) :
     # get order by id and print array of data for order 
     def printOrder(order_id) :
         order = marketMaker.contracts.get_order(order_id)
-        print(json.dumps(order))
+        print("\t\t", json.dumps(order))
 
-    # retrieve buy orders in top of book 
-    buyOrders, _ = marketMaker.contracts.getOrderBookBuy(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
-    for order_id in buyOrders :
-        printOrder(order_id) 
-    
-    # retrieve sell orders in top of book 
-    sellOrders, _ = marketMaker.contracts.getOrderBookSell(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
-    for order_id in sellOrders :
-        printOrder(order_id) 
+    try :
+        print("Print Order Book...")
+
+        # retrieve buy orders in top of book 
+        buyOrders, _ = marketMaker.contracts.getOrderBookBuy(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
+        print("\tBuy Orders:")
+        for order_id in buyOrders :
+            printOrder(order_id) 
+        
+        # retrieve sell orders in top of book 
+        sellOrders, _ = marketMaker.contracts.getOrderBookSell(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
+        print("\tSell Orders:")
+        for order_id in sellOrders :
+            printOrder(order_id) 
+
+        print("✔\tPrint Order Book\t\t10 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tPrint Order Book\t\t0 points", str(e))
 
 # cancel all open orders 
 def challengeCancelAllOpenOrders(marketMaker: marketmarker.MarketMaker) :
 
-    # load all open orders 
-    res = marketMaker.api.openOrders(marketMaker.contracts.sender_address, marketMaker.teamPair)
+    try :
+        print("Cancel All Open Orders...")
 
-    if len(res['rows']) == 0:
-        return 
-    
-    # generate a list of open orders
-    orderIds = [x["id"] for x in res["rows"]]
+        # load all open orders 
+        res = marketMaker.api.openOrders(marketMaker.contracts.sender_address, marketMaker.teamPair)
 
-    # execute the cancel all
-    marketMaker.cancel_all_orders(orderIds)
+        if len(res['rows']) > 0:
+            # generate a list of open orders
+            orderIds = [x["id"] for x in res["rows"]]
+
+
+            # TODO: need to handle partially filled orders here!
+
+
+
+            # execute the cancel all
+            marketMaker.cancel_all_orders(orderIds)
+        
+        print("✔\tCanceled All Open Orders\t\t15 points")
+    except Exception as e: # work on python 3.x
+        print("𐄂\tCancel All Open Orders\t\t0 points", str(e))
 
 # this is the main method containing the actual market making strategy logic
 def main():
@@ -159,23 +233,23 @@ def main():
         private_key = input("Enter Your metamask(or other wallet) private key")
 
     # init a new api client
-    api_client = api.Api(teamName=team_name, teamPair=team_pair)
+    api_client = api.Api(logger, teamName=team_name, teamPair=team_pair)
 
     # load the trade pairs
     pairs = api_client.trading_pairs()
 
     # init a new web3 client for handling the contracts
-    web3 = contracts.Contracts(rpc_url, sender_address, private_key, team_pair, pairs)
+    web3 = contracts.Contracts(logger, rpc_url, sender_address, private_key, team_pair, pairs)
 
     # Get Reference Data from the RESTAPI (contract addresses, pairs, trade increments, min, max trade amount) 
     # 20 points 
     challengeLoadReferenceData(web3)
 
     # init the market marker
-    marketMaker = marketmarker.MarketMaker(teamPair=team_pair, contracts=web3, api=api_client)
+    marketMaker = marketmarker.MarketMaker(logger, teamPair=team_pair, contracts=web3, api=api_client)
 
     # file used to persist if the first have of the challenge has been completed.
-    init_file = "./init_challenge_par1-v3"
+    init_file = "./init_challenge_par1-v5"
     if os.path.exists(init_file) :
         # Read & print the entire file 
         with open(init_file, 'r') as reader:
@@ -219,9 +293,6 @@ def main():
         with open(init_file, 'w') as f:
             f.write(json.dumps(cache))
 
-
-
-
 # this calls the main() method
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
@@ -239,4 +310,5 @@ if __name__ == '__main__':
     ''')
     print("starting money printer...")
     print("brrrr...")
+    print("")
     main()

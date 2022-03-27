@@ -49,7 +49,8 @@ class OrderParams:
     sell_request : OrderRequest = None     
 
 class MarketMaker :
-    def __init__(self, teamPair, contracts: contracts.Contracts, api: api.Api):
+    def __init__(self, logger, teamPair, contracts: contracts.Contracts, api: api.Api):
+        self.logger = logger 
         self.teamPair = teamPair
         self.contracts = contracts
         self.api = api
@@ -62,11 +63,11 @@ class MarketMaker :
         
         # load the native symbol
         self.nativeSymbol = self.contracts.get_symbol(self.teamPair, False)
-        print(self.nativeSymbolName, "->", self.nativeSymbol)
+        self.logger.info("nativeSymbol %s" % self.nativeSymbolName)
         
         # load the team symbol
         self.teamSymbol = self.contracts.get_symbol(self.teamPair, True)
-        print(self.teamSymbolName, "->", self.teamSymbol)
+        self.logger.info("teamSymbol %s" % self.teamSymbolName)
 
     def load_open_orders(self) :
         res = self.api.openOrders(self.contracts.sender_address, self.teamPair)
@@ -81,14 +82,12 @@ class MarketMaker :
         # bid is the maximum price that a buyer is willing to pay
         _, bid_price_raw = self.contracts.getOrderBookBuy(self.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
         bid_price = self.contracts.parse_decimal_quote(bid_price_raw)
-
-        print("bid_price", bid_price, "bid_price_raw", bid_price_raw)
+        self.logger.info("bid_price %.4f bid_price_raw %.4f" % (bid_price, bid_price_raw))
 
         # ask is the minimum price that a seller is willing to accept 
         _, ask_price_raw = self.contracts.getOrderBookSell(self.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
         ask_price = self.contracts.parse_decimal_quote(ask_price_raw)
-
-        print("ask_price", ask_price, "ask_price_raw", ask_price_raw)
+        self.logger.info("ask_price %.4f ask_price_raw %.4f" % (ask_price, ask_price_raw))
 
         mid_price = None 
         spread_amount = 0 
@@ -101,8 +100,7 @@ class MarketMaker :
             mid_price = ask_price   
         else :
             # TODO: should log all the past orders and to generate a last price
-            #       that can be used as reference
-            
+            #       that can be used as reference  
             mid_price = initial_price
 
         # TODO: finish this!!!!
@@ -123,20 +121,24 @@ class MarketMaker :
         else :
             max_spread_amount = min_spread_amount + 0.01
 
-        target_spread_amount = random.uniform(min_spread_amount, max_spread_amount)
+        if max_spread_amount - min_spread_amount < 0.05 :
+            max_spread_amount = max_spread_amount + 0.05    
 
-        print("avg_price %.2f" % (avg_price))
-        print("base_price %.2f" % (base_price))
-        print("avg_spread %.2f" % (avg_spread))
-        print("min_spread_amount %.2f" % (min_spread_amount))
-        print("max_spread_amount %.2f" % (max_spread_amount))
-        print("target_spread_amount %.2f" % (target_spread_amount))
+        #target_spread_amount = random.uniform(min_spread_amount, max_spread_amount)
+        target_spread_amount = max_spread_amount
+
+        self.logger.debug("avg_price %.2f" % (avg_price))
+        self.logger.debug("base_price %.2f" % (base_price))
+        self.logger.debug("avg_spread %.2f" % (avg_spread))
+        self.logger.debug("min_spread_amount %.2f" % (min_spread_amount))
+        self.logger.debug("max_spread_amount %.2f" % (max_spread_amount))
+        self.logger.debug("target_spread_amount %.2f" % (target_spread_amount))
 
         trading_pair = self.api.trading_pair(self.teamPair)
         mintrade_amnt = float(trading_pair['mintrade_amnt'])
         maxtrade_amnt = float(trading_pair['maxtrade_amnt'])
-        print("mintrade_amnt %.2f" % (mintrade_amnt))
-        print("maxtrade_amnt %.2f" % (maxtrade_amnt))
+        self.logger.debug("mintrade_amnt %.2f" % (mintrade_amnt))
+        self.logger.debug("maxtrade_amnt %.2f" % (maxtrade_amnt))
 
         resp = OrderParams()
         resp.bid_price_raw = bid_price_raw 
@@ -176,7 +178,11 @@ class MarketMaker :
         order_type = contracts.ORDER_TYPE_LIMIT
         
         tx_token = self.contracts.add_order(self.teamPair, req.price, req.quantity, order_side, order_type)
-        print("execute_buy_order price:%.2f quantity:%.0f tx:%s" % (req.price, req.quantity, tx_token))
+        self.logger.info("execute_buy_order price:%.2f quantity:%.0f tx:%s" % (req.price, req.quantity, tx_token))
+
+        # TODO: add the order to the local cur_open_orders for reference 
+
+        return tx_token
 
     def execute_sell_order(self, req : OrderRequest) :
 
@@ -184,7 +190,11 @@ class MarketMaker :
         order_type = contracts.ORDER_TYPE_LIMIT
         
         tx_token = self.contracts.add_order(self.teamPair, req.price, req.quantity, order_side, order_type)
-        print("execute_sell_order price:%.2f quantity:%.0f tx:%s" % (req.price, req.quantity, tx_token))
+        self.logger.info("execute_sell_order price:%.2f quantity:%.0f tx:%s" % (req.price, req.quantity, tx_token))
+
+        # TODO: add the order to the local cur_open_orders for reference 
+
+        return tx_token
 
     def cancel_order(self, order_id) :
         tx_token = self.contracts.cancel_order(order_id, teamPair=self.teamPair)
