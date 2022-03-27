@@ -67,19 +67,19 @@ def challengeOrderSet1(marketMaker: marketmarker.MarketMaker) :
     return params
 
 # enter a new set of buy & sell orders with different prices based on the changing 
-# mid/last price against the contracts 
-def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, first_order_params : marketmarker.OrderParams) :
+# mid/last price  against the contracts 
+def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, cache) :
     params = marketMaker.generate_order_params()
 
     # verify buy is different than first
-    if first_order_params.buy_request.price != params.buy_request.price :
+    if cache["set1_buy_request_price"] != params.buy_request.price :
        print("GREAT: buy price is different")
 
     # excute the buy order 
     marketMaker.execute_buy_order(params.buy_request)
 
     # verify sell is different than first
-    if first_order_params.sell_request.price != params.sell_request.price :
+    if cache["set1_sell_request_price"] != params.sell_request.price :
        print("GREAT: sell price is different")
 
     # excute the sell order 
@@ -114,7 +114,7 @@ def challengeCancelAllOpenOrders(marketMaker: marketmarker.MarketMaker) :
     orderIds = [x["id"] for x in res["rows"]]
 
     # execute the cancel all
-    marketMaker.cancel_all_orders(orderIds, teamName=marketMaker.teamPair)
+    marketMaker.cancel_all_orders(orderIds)
 
 # this is the main method containing the actual market making strategy logic
 def main():
@@ -150,11 +150,11 @@ def main():
     marketMaker = marketmarker.MarketMaker(teamPair=team_pair, contracts=web3, api=api_client)
 
     # file used to persist if the first have of the challenge has been completed.
-    init_file = "./init_challenge_par1-v2"
+    init_file = "./init_challenge_par1-v3"
     if os.path.exists(init_file) :
         # Read & print the entire file 
         with open(init_file, 'r') as reader:
-            first_order_params = json.loads(reader.read())
+            cache = json.loads(reader.read())
 
         # Get your open orders from RESTAPI at startup. 
         # 20 points
@@ -168,7 +168,7 @@ def main():
         # Wait ~20 seconds and enter a new set of buy & sell orders  with different prices based on the changing mid/last price  against the contracts 
         # 20 points
         time.sleep(20)
-        challengeOrderSet2(marketMaker=marketMaker, first_order_params=first_order_params)
+        challengeOrderSet2(marketMaker=marketMaker, cache=cache)
 
         # Bonus: print order bool to console log 
         # 10 points
@@ -187,10 +187,12 @@ def main():
         order_params = challengeOrderSet1(marketMaker)
 
         # write a file so we know the first challenge has run
+        cache = {
+            "set1_buy_request_price": order_params.buy_request.price,
+            "set1_sell_request_price": order_params.sell_request.price,
+        }
         with open(init_file, 'w') as f:
-            f.write(json.dumps(order_params))
-
-            
+            f.write(json.dumps(cache))
 
 # this calls the main() method
 if __name__ == '__main__':

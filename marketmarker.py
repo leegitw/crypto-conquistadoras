@@ -3,6 +3,7 @@ import api
 import utils 
 import random
 import math 
+import os 
 import pandas as pd 
 
 class OrderRequest :
@@ -99,10 +100,9 @@ class MarketMaker :
         elif ask_price > 0 :
             mid_price = ask_price   
         else :
-
-            #auction = self.contracts.getAuctionData(self.teamPair)
-         
-
+            # TODO: should log all the past orders and to generate a last price
+            #       that can be used as reference
+            
             mid_price = initial_price
 
         # TODO: finish this!!!!
