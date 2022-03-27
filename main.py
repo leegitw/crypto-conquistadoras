@@ -1,9 +1,28 @@
 '''
 Main script for the Dexalot challenge.
+
+ /$$$$$$$                                /$$             /$$                  
+| $$__  $$                              | $$            | $$                  
+| $$  \ $$  /$$$$$$  /$$   /$$  /$$$$$$ | $$  /$$$$$$  /$$$$$$                
+| $$  | $$ /$$__  $$|  $$ /$$/ |____  $$| $$ /$$__  $$|_  $$_/                
+| $$  | $$| $$$$$$$$ \  $$$$/   /$$$$$$$| $$| $$  \ $$  | $$                  
+| $$  | $$| $$_____/  >$$  $$  /$$__  $$| $$| $$  | $$  | $$ /$$              
+| $$$$$$$/|  $$$$$$$ /$$/\  $$|  $$$$$$$| $$|  $$$$$$/  |  $$$$/              
+|_______/  \_______/|__/  \__/ \_______/|__/ \______/    \___/                
+
+
+  /$$$$$$  /$$                 /$$ /$$                                        
+ /$$__  $$| $$                | $$| $$                                        
+| $$  \__/| $$$$$$$   /$$$$$$ | $$| $$  /$$$$$$  /$$$$$$$   /$$$$$$   /$$$$$$ 
+| $$      | $$__  $$ |____  $$| $$| $$ /$$__  $$| $$__  $$ /$$__  $$ /$$__  $$
+| $$      | $$  \ $$  /$$$$$$$| $$| $$| $$$$$$$$| $$  \ $$| $$  \ $$| $$$$$$$$
+| $$    $$| $$  | $$ /$$__  $$| $$| $$| $$_____/| $$  | $$| $$  | $$| $$_____/
+|  $$$$$$/| $$  | $$|  $$$$$$$| $$| $$|  $$$$$$$| $$  | $$|  $$$$$$$|  $$$$$$$
+ \______/ |__/  |__/ \_______/|__/|__/ \_______/|__/  |__/ \____  $$ \_______/
+                                                           /$$  \ $$          
+                                                          |  $$$$$$/          
+                                                           \______/           
 '''
-#######################################################
-# Import here useful libraries
-#######################################################
 
 from this import d
 import requests 
@@ -23,12 +42,12 @@ def signal_handler(signum, frame):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     shutdown = True
 
-# Get Reference Data from the RESTAPI (contract addresses, pairs, trade increments, min, max trade amount) 
+# get Reference Data from the RESTAPI (contract addresses, pairs, trade increments, min, max trade amount) 
 def challengeLoadReferenceData(web3 : contracts.Contracts) :
     web3.load_reference_data()
     
     print("✓\tReference Data\t\t20 points")
-   
+
 # deposit Avax and Team3 automatically
 def challenge1DespositToken(marketMaker: marketmarker.MarketMaker, despositAmount: int) :
     marketMaker.contracts.deposit_token(marketMaker.contracts.sender_address, marketMaker.nativeSymbolName, despositAmount)
@@ -36,6 +55,7 @@ def challenge1DespositToken(marketMaker: marketmarker.MarketMaker, despositAmoun
 
     print("✓\tDeposit Tokens Automatically\t\t 5 points")
 
+# called on startup
 def challengeStartupLoad(marketMaker: marketmarker.MarketMaker) :
 
     # get open orders at startup 
@@ -43,16 +63,20 @@ def challengeStartupLoad(marketMaker: marketmarker.MarketMaker) :
 
     return orders
 
+# cancel open orders given orders
 def challengeCancelOpenOrders(marketMaker: marketmarker.MarketMaker, orders) :
+    
+    # create list of order_ids from provided orders
     order_ids = []
     for order_id in orders.keys(): 
         order_ids.append(order_id)
 
+    # for each order, cancel it 
     for order_id in order_ids:
         marketMaker.cancel_order(order_id)
 
-# enter a BUY & a SELL order with a predefined spread around a given mid price or 
-# last price against the contracts. 
+# enter a BUY & a SELL order with a predefined spread around a given mid price
+# or last price against the contracts. 
 def challengeOrderSet1(marketMaker: marketmarker.MarketMaker) :
     params = marketMaker.generate_order_params(default_quantity=2)
 
@@ -68,7 +92,7 @@ def challengeOrderSet1(marketMaker: marketmarker.MarketMaker) :
 # mid/last price  against the contracts 
 def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, cache) :
     params = marketMaker.generate_order_params()
- 
+
     # verify buy is different than first
     if cache["set1_buy_request_price"] != params.buy_request.price :
        print("GREAT: buy price is different")
@@ -83,22 +107,25 @@ def challengeOrderSet2(marketMaker: marketmarker.MarketMaker, cache) :
     # excute the sell order 
     marketMaker.execute_sell_order(params.sell_request)
 
+# get order book for buy and sell orders 
 def challengeBonusPrintOrderBook(marketMaker: marketmarker.MarketMaker) :
 
+    # get order by id and print array of data for order 
     def printOrder(order_id) :
         order = marketMaker.contracts.get_order(order_id)
         print(json.dumps(order))
 
-    # 
+    # retrieve buy orders in top of book 
     buyOrders, _ = marketMaker.contracts.getOrderBookBuy(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
     for order_id in buyOrders :
         printOrder(order_id) 
     
-    # 
+    # retrieve sell orders in top of book 
     sellOrders, _ = marketMaker.contracts.getOrderBookSell(marketMaker.teamPair, contracts.ORDER_BOOK_DEPTH_TOP_OF_BOOK)
     for order_id in sellOrders :
         printOrder(order_id) 
 
+# cancel all open orders 
 def challengeCancelAllOpenOrders(marketMaker: marketmarker.MarketMaker) :
 
     # load all open orders 
@@ -116,6 +143,7 @@ def challengeCancelAllOpenOrders(marketMaker: marketmarker.MarketMaker) :
 # this is the main method containing the actual market making strategy logic
 def main():
 
+    # team specific configuration parameters 
     team_name = "TEAM3"
     team_pair = "TEAM3/AVAX"
     deposit_amount = 10 
