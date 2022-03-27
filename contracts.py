@@ -241,8 +241,8 @@ class Contracts :
     def getAuctionData(self, trade_pair_id) :
         contract = self.get_contract_trade_pairs() 
 
-        res = contract.functions.getAuctionData(self.web3.toBytes(text=trade_pair_id)).call()
-        print(res)
+        return contract.functions.getAuctionData(self.web3.toBytes(text=trade_pair_id)).call()
+        
 
 
         
