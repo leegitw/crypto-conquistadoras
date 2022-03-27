@@ -16,7 +16,7 @@ python3 main.py
 * ENV vars - Set `SENDER_ADDRESS` and `PRIVATE_KEY`
 * Inline prompt - The script will prompt you for your [Meta Mask wallent and secret key](https://metamask.zendesk.com/hc/en-us/articles/360015289632-How-to-Export-an-Account-Private-Key).
 
-### research ipython netbook  
+### Research ipython netbook  
 
 iPython notebook is available for testing endpoints and debugging contracts. 
 Run `dexalot.ipynb`
