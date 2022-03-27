@@ -6,12 +6,11 @@
 2. Create a new python virtual environment for version 3.9
     * if you run into package dependency issues, this is the easist way to resolve.
 3. Run the python script. 
+   *  You will need to deposit at least one token for AVAX and Team3 into your protfolio. There is a checkbox when you make the first desposit to approve all future requests. Make sure that is checked.
 
 ```
 python3 main.py
 ```
-
-    *  You will need to deposit at least one token for AVAX and Team3 into your protfolio. There is a checkbox when you make the first desposit to approve all future requests. Make sure that is checked.
 
 4. Authentication to wallet can be provided by using environment variables or input promt. 
 * ENV vars - Set `SENDER_ADDRESS` and `PRIVATE_KEY`
