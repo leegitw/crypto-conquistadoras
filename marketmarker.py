@@ -124,7 +124,7 @@ class MarketMaker :
         
         est_gas = self.contracts.parse_decimal_quote(buy_gas + sell_gas, display_decimals=10)
         
-        # TODO: this should be set to the gas amount 
+        # ensure the spread is at least wide enough to cover gas fees 
         min_spread_amount = 0.1 + est_gas
 
         if avg_spread > 0 :
@@ -266,3 +266,4 @@ class MarketMaker :
             avg = 0 
 
         return float(avg)            
+        
